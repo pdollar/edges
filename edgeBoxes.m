@@ -1,7 +1,7 @@
 function bbs = edgeBoxes( I, model, varargin )
-% Generate Edge Box object proposals in given image(s).
+% Generate Edge Boxes object proposals in given image(s).
 %
-% Compute Edge Box object proposals as described in:
+% Compute Edge Boxes object proposals as described in:
 %  C. Lawrence Zitnick and Piotr Dollár
 %  "Edge Boxes: Locating Object Proposals from Edges", ECCV 2014.
 % The proposal boxes are fast to compute and give state-of-the-art recall.
@@ -32,7 +32,7 @@ function bbs = edgeBoxes( I, model, varargin )
 %
 % INPUTS
 %  I          - input image(s) of filename(s) of input image(s)
-%  model      - structured edge model trained with edgesTrain
+%  model      - Structured Edge model trained with edgesTrain
 %  opts       - parameters (struct or name/value pairs)
 %   (1) main parameters, see above for details
 %   .name           - [] target filename (if specified return is 1)
@@ -41,16 +41,16 @@ function bbs = edgeBoxes( I, model, varargin )
 %   .minScore       - [.01] min score of boxes to detect
 %   .maxBoxes       - [1e4] max number of boxes to detect
 %   (2) additional parameters, safe to ignore and leave at default vals
-%   .edgeMinMag     - [.1] increase to tradeoff accuracy for speed
-%   .edgeMergeThr   - [.5] increase to tradeoff accuracy for speed
-%   .clusterMinMag  - [.5] increase to tradeoff accuracy for speed
+%   .edgeMinMag     - [.1] increase to trade off accuracy for speed
+%   .edgeMergeThr   - [.5] increase to trade off accuracy for speed
+%   .clusterMinMag  - [.5] increase to trade off accuracy for speed
 %   .maxAspectRatio - [3] max aspect ratio of boxes
 %   .minBoxArea     - [1000] minimum area of boxes
 %   .gamma          - [2] affinity sensitivity, see equation 1 in paper
 %   .kappa          - [1.5] scale sensitivity, see equation 3 in paper
 %
 % OUTPUTS
-%  bbs        - [nx5] array containg proposal bbs [x y w h score]
+%  bbs        - [nx5] array containing proposal bbs [x y w h score]
 %
 % EXAMPLE
 %

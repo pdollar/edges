@@ -1,17 +1,15 @@
 % EDGES
-% See also
+% See also readme.txt
 %
 % Fast edge detector code is based on the paper:
 %  P. Dollár and C. Zitnick
 %  "Structured Forests for Fast Edge Detection", ICCV 2013.
 % Please cite the above paper if you end up using the edge detector.
-% Code written and maintained by Piotr Dollar.
 %
 % Edge Boxes object proposal generation is based on the paper:
 %  C. Zitnick and P. Dollár
 %  "Edge Boxes: Locating Object Proposals from Edges", ECCV 2014.
 % Please cite the above paper if you end up using the object proposals.
-% Code written and maintained by C. Zitnick and P. Dollár.
 %
 % Structured Edge detector code:
 %   edgesChns     - Compute features for structured edge detection.
@@ -28,5 +26,5 @@
 %   edgesEvalPlot - Plot edge precision/recall results for directory of edge images.
 %
 % Edge Boxes object proposal generation code:
-%   edgeBoxes     - Generate Edge Box object proposals in given image(s).
+%   edgeBoxes     - Generate Edge Boxes object proposals in given image(s).
 %   edgeBoxesDemo - Demo for Edge Boxes (please see readme.txt first).

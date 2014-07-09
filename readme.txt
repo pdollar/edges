@@ -9,7 +9,7 @@
 
 Very fast edge detector (1-60 fps depending on parameter settings) that achieves excellent accuracy (top accuracy on BSDS500 Segmentation dataset and NYU Depth dataset as of publication date). Can serve as input to any vision algorithm requiring high quality edge maps. Toolbox also includes the Edge Boxes object proposal generation method as described in the ECCV14 paper.
 
-If you use the Structured Edge Detection Toolbox, we appreciate it if you cite a subset of the following work in any resulting publication:
+If you use the Structured Edge Detection Toolbox, we appreciate it if you cite an appropriate subset of the following papers:
 
 @inproceedings{DollarICCV13edges,
   author={Piotr Doll\'ar and C. Lawrence Zitnick},
@@ -61,6 +61,7 @@ Linux version 2:
   mex private/edgesDetectMex.cpp -outdir private '-DUSEOMP' CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
   mex private/edgesNmsMex.cpp    -outdir private '-DUSEOMP' CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
   mex private/edgeBoxesMex.cpp   -outdir private
+To compile without OpenMP remove '-DUSEOMP' and everything that follows - code will be single threaded in this case.
 
 d) Add edge detection code to Matlab path (change to current directory first): 
  >> addpath(pwd); savepath;
