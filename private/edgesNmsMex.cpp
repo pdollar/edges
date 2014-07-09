@@ -23,12 +23,12 @@ inline float interp( float *I, int h, int w, float x, float y ) {
 // E = mexFunction(E,O,r,s,m,nThreads)
 void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
 {
-  float *E0 = (float*) mxGetData(pr[0]);
-  float *O = (float*) mxGetData(pr[1]);
-  int r = (int) mxGetScalar(pr[2]);
-  int s = (int) mxGetScalar(pr[3]);
-  float m = (float) mxGetScalar(pr[4]);
-  int nThreads = (int) mxGetScalar(pr[5]);
+  float *E0 = (float*) mxGetData(pr[0]);    // original edge map
+  float *O = (float*) mxGetData(pr[1]);     // orientation map
+  int r = (int) mxGetScalar(pr[2]);         // radius for nms supr
+  int s = (int) mxGetScalar(pr[3]);         // radius for supr boundaries
+  float m = (float) mxGetScalar(pr[4]);     // multiplier for conservative supr
+  int nThreads = (int) mxGetScalar(pr[5]);  // number of threads for evaluation
 
   int h=(int) mxGetM(pr[0]), w=(int) mxGetN(pr[0]);
   pl[0] = mxCreateNumericMatrix(h,w,mxSINGLE_CLASS,mxREAL);
@@ -40,7 +40,7 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
   #pragma omp parallel for num_threads(nThreads)
   #endif
   for( int x=0; x<w; x++ ) for( int y=0; y<h; y++ ) {
-    float e=E[x*h+y]=E0[x*h+y]; e*=m;
+    float e=E[x*h+y]=E0[x*h+y]; if(!e) continue; e*=m;
     float coso=cos(O[x*h+y]), sino=sin(O[x*h+y]);
     for( int d=-r; d<=r; d++ ) if( d ) {
       float e0 = interp(E0,h,w,x+d*coso,y+d*sino);
