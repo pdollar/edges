@@ -85,7 +85,7 @@ f) A fully trained edge model for RGB images is available as part of this releas
 5. History.
 
 Version NEW
- - adding Edge Boxes object proposal code
+ - adding Edge Boxes code corresponding to ECCV paper
 
 Version 2.0 (06/20/2014)
  - second version corresponding to arXiv paper

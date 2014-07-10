@@ -15,6 +15,9 @@ function bbs = edgeBoxes( I, model, varargin )
 % Finally, a number of additional params listed below are set to reasonable
 % defaults and in most cases should not need to be altered.
 %
+% For a faster version the proposal code runs at ~10 fps on average use:
+%  model.opts.sharpen=0; opts.alpha=.625; opts.minScore=.02;
+%
 % The code uses the Structured Edge Detector to compute edge strength and
 % orientation. See edgesDetect.m for details. Alternatively, the code could
 % be altered to use any other edge detector such as Canny.
@@ -54,7 +57,7 @@ function bbs = edgeBoxes( I, model, varargin )
 %
 % EXAMPLE
 %
-% See also edgesDetect
+% See also edgeBoxesDemo, edgesDetect
 %
 % Structured Edge Detection Toolbox      Version 2.0
 % Copyright 2014 P. Dollar and L. Zitnick.  [pdollar-at-microsoft.com]
