@@ -26,3 +26,11 @@ end
 gt(:,5)=0; [gtRes,dtRes]=bbGt('evalRes',gt,double(bbs),.7);
 figure(1); bbGt('showRes',I,gtRes,dtRes(dtRes(:,6)==1,:));
 title('green=matched gt  red=missed gt  dashed-green=matched detect');
+
+%% run/evaluate on entire dataset (see boxesData.m and boxesEval.m)
+if(~exist('boxes/VOCdevkit/','dir')), return; end
+split='val'; name='EdgeBoxes70';
+opts.name=['boxes/' name '-' split '.mat'];
+data=boxesData('split',split);
+tic, edgeBoxes(data.imgs,model,opts); toc
+tic, boxesEval('split',split,'detectors',{name},'thrs',.7,'show',2); toc
