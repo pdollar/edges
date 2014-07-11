@@ -28,8 +28,8 @@
 % Edge Boxes object proposal generation code:
 %   edgeBoxes       - Generate Edge Boxes object proposals in given image(s).
 %   edgeBoxesDemo   - Demo for Edge Boxes (please see readme.txt first).
-%   edgeBoxesSweeps - Parameter sweeps for Edges Box object proposals.
+%   edgeBoxesSweeps - Parameter sweeps for Edges Boxes object proposals.
 %
 % Object proposal evaluation code:
-%   boxesData       - Get groundtruth data for object proposal bounding box evaluation.
-%   boxesEval       - Perform object proposal bounding box evaluation.
+%   boxesData       - Get ground truth data for object proposal bounding box evaluation.
+%   boxesEval       - Perform object proposal bounding box evaluation and plot results.

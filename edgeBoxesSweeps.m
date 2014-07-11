@@ -1,5 +1,5 @@
 function edgeBoxesSweeps()
-% Parameter sweeps for Edges Box object proposals.
+% Parameter sweeps for Edges Boxes object proposals.
 %
 % Running the parameter sweeps requires altering internal flags.
 % The sweeps are not well documented, use at your own discretion.
@@ -10,7 +10,7 @@ function edgeBoxesSweeps()
 % Licensed under the MSR-LA Full Rights License [see license.txt]
 
 % define parameter sweeps
-rt = 'D:\code\research\EdgeBoxes\';
+rt = 'D:\code\research\edges\';
 expNms = {'alpha','beta','minScore','edgeMinMag','edgeMergeThr',...
   'clusterMinMag','maxAspectRatio','minBoxArea','gamma','kappa'};
 expNms=expNms(1:end); opts=createExp(rt,expNms); maxn=inf;
@@ -20,27 +20,21 @@ jobs = createJobs(rt,opts,maxn);
 tic, for i=1:length(jobs), edgeBoxes(jobs{i}{:}); end; toc
 
 % plot all results
-copyfile([rt '/results/GroundTruth-val.mat'],[rt '/results/sweeps/']);
 for e=1:length(expNms)
-  p=boxesEval; p.type='val'; p.maxn=maxn; p.fName=expNms{e};
-  p.resDir=[rt 'results/sweeps/']; p.detectors={opts{e}.name};
-  p.overlaps=.7; boxesEval(p);
-  p.overlaps=.5:.05:1; p.windows=1000; boxesEval(p);
+  eval={'data',boxesData('split','val'),'names',{opts{e}.name},...
+    'resDir',[rt 'boxes/sweeps/'],'maxn',maxn,'fName',expNms{e}};
+  boxesEval(eval{:},'thrs',.7);
+  boxesEval(eval{:},'thrs',.5:.05:1,'cnts',1000);
 end
 
 end
 
 function jobs = createJobs( rt, opts, maxn )
-% edge detector to use (hardcode path)
-M='D:\code\research\edges\models\forest\modelBsds';
-M=load(M); M=M.model; M.opts.nThreads=1;
-% get list of files for detection
-f=fopen([rt 'data/val.txt']); fs=textscan(f,'%s %*s'); fclose(f);
-fs=fs{1}; n=min(length(fs),maxn); fs=fs(1:n);
-for i=1:n, fs{i}=[rt 'data/images/' fs{i} '.jpg']; end;
 % create jobs
+M='models/forest/modelBsds'; M=load(M); M=M.model; M.opts.nThreads=1;
+data=boxesData('split','val'); fs=data.imgs(1:min(end,maxn));
 opts=[opts{:}]; N=length(opts); jobs=cell(1,N); D=zeros(1,N);
-for e=1:N, opts(e).name=[rt 'results/sweeps/' opts(e).name '-val.mat']; end
+for e=1:N, opts(e).name=[rt 'boxes/sweeps/' opts(e).name '-val.mat']; end
 for e=1:N, D(e)=exist(opts(e).name,'file')==2; jobs{e}={fs,M,opts(e)}; end
 [~,K]=unique({opts.name},'stable'); D=D(K); jobs=jobs(K); jobs=jobs(~D);
 fprintf('nJobs = %i\n',length(jobs));
