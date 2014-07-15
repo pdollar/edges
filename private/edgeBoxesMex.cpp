@@ -64,14 +64,15 @@ private:
   vector<vectori> _hIdxs, _vIdxs; vectorf _scaleNorm;
   float _scStep, _arStep, _rcStepRatio;
 
+  // data structures for efficiency (see scoreBox)
+  arrayf _sWts; arrayi _sDone, _sMap, _sIds; int _sId;
+
   // helper routines
   void clusterEdges( arrayf &E, arrayf &O, arrayf &V );
   void prepDataStructs( arrayf &E );
   void scoreAllBoxes( Boxes &boxes );
-  void scoreBox( Box &box, int &sId, float *sWts,
-    int *sIds, int *sDone, int *sMap );
-  void refineBox( Box &box, int &sId, float *sWts,
-    int *sIds, int *sDone, int *sMap );
+  void scoreBox( Box &box );
+  void refineBox( Box &box );
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -241,12 +242,18 @@ void EdgeBoxGenerator::prepDataStructs( arrayf &E )
       _vIdxImg.val(c,r) = int(_vIdxs[c].size())-1;
     }
   }
+
+  // initialize scoreBox() data structures
+  int n=_segCnt+1; _sWts.init(n,1);
+  _sDone.init(n,1); _sMap.init(n,1); _sIds.init(n,1);
+  for( i=0; i<n; i++ ) _sDone.val(0,i)=-1; _sId=0;
 }
 
-void EdgeBoxGenerator::scoreBox( Box &box, int &sId,
-  float *sWts, int *sIds, int *sDone, int *sMap )
+void EdgeBoxGenerator::scoreBox( Box &box )
 {
   int i, j, k, q, bh, bw, r0, c0, r1, c1, r0m, r1m, c0m, c1m;
+  float *sWts=_sWts._x; int sId=_sId++;
+  int *sDone=_sDone._x, *sMap=_sMap._x, *sIds=_sIds._x;
   // add edge count inside box
   r1=clamp(box.r+box.h,0,h-1); r0=box.r=clamp(box.r,0,h-1);
   c1=clamp(box.c+box.w,0,w-1); c0=box.c=clamp(box.c,0,w-1);
@@ -261,7 +268,7 @@ void EdgeBoxGenerator::scoreBox( Box &box, int &sId,
   float norm = _scaleNorm[bw+bh]; box.s=v*norm;
   if( box.s<_minScore ) { box.s=0; return; }
   // find interesecting segments along four boundaries
-  int cs, ce, rs, re, n=0; sId++;
+  int cs, ce, rs, re, n=0;
   cs=_hIdxImg.val(c0,r0); ce=_hIdxImg.val(c1,r0); // top
   for( i=cs; i<=ce; i++ ) if( (j=_hIdxs[r0][i])>0 && sDone[j]!=sId ) {
     sIds[n]=j; sWts[n]=1; sDone[j]=sId; sMap[j]=n++;
@@ -300,33 +307,29 @@ void EdgeBoxGenerator::scoreBox( Box &box, int &sId,
   v*=norm; if(v<_minScore) v=0; box.s=v;
 }
 
-void EdgeBoxGenerator::refineBox( Box &box, int &sId,
-  float *sWts, int *sIds, int *sDone, int *sMap )
+void EdgeBoxGenerator::refineBox( Box &box )
 {
-  #define SCORE(box) scoreBox(box,sId,sWts,sIds,sDone,sMap)
-
   int rStep = int(box.h*_rcStepRatio);
   int cStep = int(box.w*_rcStepRatio);
-
   while( 1 ) {
     // prepare for iteration
     rStep/=2; cStep/=2; if( rStep<=2 && cStep<=2 ) break;
     rStep=max(1,rStep); cStep=max(1,cStep); Box B;
     // search over r start
-    B=box; B.r=box.r-rStep; B.h=B.h+rStep; SCORE(B);
-    if(B.s<=box.s) { B.r=box.r+rStep; B.h=B.h-rStep; SCORE(B); }
+    B=box; B.r=box.r-rStep; B.h=B.h+rStep; scoreBox(B);
+    if(B.s<=box.s) { B.r=box.r+rStep; B.h=B.h-rStep; scoreBox(B); }
     if(B.s>box.s) box=B;
     // search over r end
-    B=box; B.h=B.h+rStep; SCORE(B);
-    if(B.s<=box.s) { B.h=B.h-rStep; SCORE(B); }
+    B=box; B.h=B.h+rStep; scoreBox(B);
+    if(B.s<=box.s) { B.h=B.h-rStep; scoreBox(B); }
     if(B.s>box.s) box=B;
     // search over c start
-    B=box; B.c=box.c-cStep; B.w=B.w+cStep; SCORE(B);
-    if(B.s<=box.s) { B.c=box.c+cStep; B.w=B.w-cStep; SCORE(B); }
+    B=box; B.c=box.c-cStep; B.w=B.w+cStep; scoreBox(B);
+    if(B.s<=box.s) { B.c=box.c+cStep; B.w=B.w-cStep; scoreBox(B); }
     if(B.s>box.s) box=B;
     // search over c end
-    B=box; B.w=B.w+cStep; SCORE(B);
-    if(B.s<=box.s) { B.w=B.w-cStep; SCORE(B); }
+    B=box; B.w=B.w+cStep; scoreBox(B);
+    if(B.s<=box.s) { B.w=B.w-cStep; scoreBox(B); }
     if(B.s>box.s) box=B;
   }
 }
@@ -349,22 +352,15 @@ void EdgeBoxGenerator::scoreAllBoxes( Boxes &boxes )
     }
   }
 
-  // helper variables for making scoreBox and refineBox efficient
-  int n=_segCnt+1; float *sWts = new float[n];
-  int *sDone=new int[n], *sMap=new int[n], *sIds=new int[n];
-  for( int i=0; i<n; i++ ) sDone[i]=-1; int sId=0;
-
   // score all boxes, refine top candidates, perform nms
   int i, k=0, m = int(boxes.size());
   for( i=0; i<m; i++ ) {
-    scoreBox(boxes[i],sId,sWts,sIds,sDone,sMap);
+    scoreBox(boxes[i]);
     if( !boxes[i].s ) continue; k++;
-    refineBox(boxes[i],sId,sWts,sIds,sDone,sMap);
+    refineBox(boxes[i]);
   }
   sort(boxes.rbegin(),boxes.rend(),boxesCompare);
   boxes.resize(k); boxesNms(boxes,_beta,_maxBoxes);
-  if(0) printf("boxes grid=%i kept=%i\n",m,k);
-  delete [] sIds; delete [] sWts; delete [] sDone; delete [] sMap;
 }
 
 float boxesOverlap( Box &a, Box &b ) {
