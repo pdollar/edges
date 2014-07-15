@@ -318,19 +318,19 @@ void EdgeBoxGenerator::refineBox( Box &box )
     rStep=max(1,rStep); cStep=max(1,cStep); Box B;
     // search over r start
     B=box; B.r=box.r-rStep; B.h=B.h+rStep; scoreBox(B);
-    if(B.s<=box.s) { B.r=box.r+rStep; B.h=B.h-rStep; scoreBox(B); }
+    if(B.s<=box.s) { B=box; B.r=box.r+rStep; B.h=B.h-rStep; scoreBox(B); }
     if(B.s>box.s) box=B;
     // search over r end
     B=box; B.h=B.h+rStep; scoreBox(B);
-    if(B.s<=box.s) { B.h=B.h-rStep; scoreBox(B); }
+    if(B.s<=box.s) { B=box; B.h=B.h-rStep; scoreBox(B); }
     if(B.s>box.s) box=B;
     // search over c start
     B=box; B.c=box.c-cStep; B.w=B.w+cStep; scoreBox(B);
-    if(B.s<=box.s) { B.c=box.c+cStep; B.w=B.w-cStep; scoreBox(B); }
+    if(B.s<=box.s) { B=box; B.c=box.c+cStep; B.w=B.w-cStep; scoreBox(B); }
     if(B.s>box.s) box=B;
     // search over c end
     B=box; B.w=B.w+cStep; scoreBox(B);
-    if(B.s<=box.s) { B.w=B.w-cStep; scoreBox(B); }
+    if(B.s<=box.s) { B=box; B.w=B.w-cStep; scoreBox(B); }
     if(B.s>box.s) box=B;
   }
 }
