@@ -37,7 +37,7 @@ function recall = boxesEval( varargin )
 %
 % EXAMPLE
 %
-% See also edgeBoxesDemo, edgeBoxes, boxesData
+% See also edgeBoxesDemo, edgeBoxes, boxesData, bbGt
 %
 % Structured Edge Detection Toolbox      Version 2.0
 % Copyright 2014 P. Dollar and L. Zitnick.  [pdollar-at-microsoft.com]
@@ -88,12 +88,12 @@ end
 
 function plotResult( recall, o )
 % plot results
-[M,T,K]=size(recall); fSiz={'FontSize',12};
+[M,T,K]=size(recall); fSiz={'FontSize',12}; f=o.show;
 for type=1:2
   if(type==1), xs=o.cnts; else xs=o.thrs; end;
   if(length(xs)==1), continue; end; s=[T,M]; M=s(type);
   R=recall; if(type==2), R=permute(R,[2 1 3]); end
-  figure(o.show+type-1); clf; hold on; hs=zeros(M,K);
+  figure(f); f=f+1; clf; hold on; hs=zeros(M,K);
   for i=1:M, for k=1:K, hs(i,k)=plot(xs,R(:,i,k),...
         'Color',o.col{k},'LineWidth',3); end; end
   s={'# of proposals','IoU'}; xlabel(s{type},fSiz{:});

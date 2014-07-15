@@ -12,20 +12,20 @@ Very fast edge detector (1-60 fps depending on parameter settings) that achieves
 If you use the Structured Edge Detection Toolbox, we appreciate it if you cite an appropriate subset of the following papers:
 
 @inproceedings{DollarICCV13edges,
-  author={Piotr Doll\'ar and C. Lawrence Zitnick},
-  title={Structured Forests for Fast Edge Detection},
-  booktitle={ICCV},
-  year={2013},
+  author    = {Piotr Doll\'ar and C. Lawrence Zitnick},
+  title     = {Structured Forests for Fast Edge Detection},
+  booktitle = {ICCV},
+  year      = {2013},
 }
 
-@article{2014arXiv,
-  author={Piotr Doll\'ar and C. Lawrence Zitnick},
-  title={Fast Edge Detection Using Structured Forests},
-  journal = {ArXiv},
-  year = 2014,
+@article{DollarARXIV14edges,
+  author    = {Piotr Doll\'ar and C. Lawrence Zitnick},
+  title     = {Fast Edge Detection Using Structured Forests},
+  journal   = {ArXiv},
+  year      = {2014},
 }
 
-@inproceedings{ZitnickDollarECCV14edgeBoxes,
+@inproceedings{ZitnickECCV14edgeBoxes,
   author    = {C. Lawrence Zitnick and Piotr Doll\'ar},
   title     = {Edge Boxes: Locating Object Proposals from Edges},
   booktitle = {ECCV},
@@ -45,7 +45,7 @@ Please read license.txt for more info.
 
 a) This code is written for the Matlab interpreter (tested with versions R2013a-2013b) and requires the Matlab Image Processing Toolbox. 
 
-b) Additionally, Piotr's Matlab Toolbox (version 3.24 or later) is also required. It can be downloaded at: 
+b) Additionally, Piotr's Matlab Toolbox (version 3.26 or later) is also required. It can be downloaded at:
  http://vision.ucsd.edu/~pdollar/toolbox/doc/index.html.
 
 c) Next, please compile mex code from within Matlab (note: win64/linux64 binaries included):
