@@ -1,6 +1,6 @@
 ###################################################################
 #                                                                 #
-#    Structured Edge Detection Toolbox V2.0                       #
+#    Structured Edge Detection Toolbox V3.0                       #
 #    Piotr Dollar (pdollar-at-microsoft.com)                      #
 #                                                                 #
 ###################################################################
