@@ -33,3 +33,7 @@
 % Object proposal evaluation code:
 %   boxesData       - Get ground truth data for object proposal bounding box evaluation.
 %   boxesEval       - Perform object proposal bounding box evaluation and plot results.
+%
+% Sticky Edge Adhesive Superpixel code:
+%   spDemo          - Demo for Sticky Superpixels (please see readme.txt first).
+%   spDetect        - Detect Sticky Superpixels in image.

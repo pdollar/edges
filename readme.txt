@@ -7,7 +7,7 @@
 
 1. Introduction.
 
-Very fast edge detector (1-60 fps depending on parameter settings) that achieves excellent accuracy (top accuracy on BSDS500 Segmentation dataset and NYU Depth dataset as of publication date). Can serve as input to any vision algorithm requiring high quality edge maps. Toolbox also includes the Edge Boxes object proposal generation method as described in the ECCV14 paper.
+Very fast edge detector (1-60 fps depending on parameter settings) that achieves excellent accuracy (top accuracy on BSDS500 Segmentation dataset and NYU Depth dataset as of publication date). Can serve as input to any vision algorithm requiring high quality edge maps. Toolbox also includes the Edge Boxes object proposal generation method as described in the ECCV14 paper and fast superpixel code.
 
 If you use the Structured Edge Detection Toolbox, we appreciate it if you cite an appropriate subset of the following papers:
 
@@ -49,19 +49,15 @@ b) Additionally, Piotr's Matlab Toolbox (version 3.26 or later) is also required
  http://vision.ucsd.edu/~pdollar/toolbox/doc/index.html.
 
 c) Next, please compile mex code from within Matlab (note: win64/linux64 binaries included):
-Windows:
-  mex private/edgesDetectMex.cpp -outdir private '-DUSEOMP' 'OPTIMFLAGS="$OPTIMFLAGS' '/openmp"'
-  mex private/edgesNmsMex.cpp    -outdir private '-DUSEOMP' 'OPTIMFLAGS="$OPTIMFLAGS' '/openmp"'
+  mex private/edgesDetectMex.cpp -outdir private [OMPPARAMS]
+  mex private/edgesNmsMex.cpp    -outdir private [OMPPARAMS]
+  mex private/spDetectMex.cpp    -outdir private [OMPPARAMS]
   mex private/edgeBoxesMex.cpp   -outdir private
-Linux version 1:
-  mex private/edgesDetectMex.cpp -outdir private '-DUSEOMP' CFLAGS="\$CFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-  mex private/edgesNmsMex.cpp    -outdir private '-DUSEOMP' CFLAGS="\$CFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-  mex private/edgeBoxesMex.cpp   -outdir private
-Linux version 2:
-  mex private/edgesDetectMex.cpp -outdir private '-DUSEOMP' CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-  mex private/edgesNmsMex.cpp    -outdir private '-DUSEOMP' CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-  mex private/edgeBoxesMex.cpp   -outdir private
-To compile without OpenMP remove '-DUSEOMP' and everything that follows - code will be single threaded in this case.
+Here [OMPPARAMS] are parameters for OpenMP and are OS and compiler dependent.
+  Windows:  [OMPPARAMS] = '-DUSEOMP' 'OPTIMFLAGS="$OPTIMFLAGS' '/openmp"'
+  Linux V1: [OMPPARAMS] = '-DUSEOMP' CFLAGS="\$CFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
+  Linux V2: [OMPPARAMS] = '-DUSEOMP' CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
+To compile without OpenMP simply omit [OMPPARAMS], note that code will be single threaded in this case.
 
 d) Add edge detection code to Matlab path (change to current directory first): 
  >> addpath(pwd); savepath;
@@ -85,7 +81,8 @@ f) A fully trained edge model for RGB images is available as part of this releas
 5. History.
 
 Version NEW
- - adding Edge Boxes code corresponding to ECCV paper
+ - added Edge Boxes code corresponding to ECCV paper
+ - added Sticky Superpixels code
 
 Version 2.0 (06/20/2014)
  - second version corresponding to arXiv paper
