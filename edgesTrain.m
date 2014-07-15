@@ -63,8 +63,8 @@ function model = edgesTrain( varargin )
 %
 % See also edgesDemo, edgesChns, edgesDetect, forestTrain
 %
-% Structured Edge Detection Toolbox      Version 2.0
-% Copyright 2013 Piotr Dollar.  [pdollar-at-microsoft.com]
+% Structured Edge Detection Toolbox      Version 3.0
+% Copyright 2014 Piotr Dollar.  [pdollar-at-microsoft.com]
 % Please email me if you find bugs, or have suggestions or questions!
 % Licensed under the MSR-LA Full Rights License [see license.txt]
 

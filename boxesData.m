@@ -34,7 +34,7 @@ function data = boxesData( varargin )
 %
 % See also edgeBoxesDemo, edgeBoxes, boxesEval
 %
-% Structured Edge Detection Toolbox      Version 2.0
+% Structured Edge Detection Toolbox      Version 3.0
 % Copyright 2014 P. Dollar and L. Zitnick.  [pdollar-at-microsoft.com]
 % Please email me if you find bugs, or have suggestions or questions!
 % Licensed under the MSR-LA Full Rights License [see license.txt]

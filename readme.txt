@@ -7,7 +7,7 @@
 
 1. Introduction.
 
-Very fast edge detector (1-60 fps depending on parameter settings) that achieves excellent accuracy (top accuracy on BSDS500 Segmentation dataset and NYU Depth dataset as of publication date). Can serve as input to any vision algorithm requiring high quality edge maps. Toolbox also includes the Edge Boxes object proposal generation method as described in the ECCV14 paper and fast superpixel code.
+Very fast edge detector (up to 60 fps depending on parameter settings) that achieves excellent accuracy. Can serve as input to any vision algorithm requiring high quality edge maps. Toolbox also includes the Edge Boxes object proposal generation method and fast superpixel code.
 
 If you use the Structured Edge Detection Toolbox, we appreciate it if you cite an appropriate subset of the following papers:
 
@@ -57,7 +57,7 @@ Here [OMPPARAMS] are parameters for OpenMP and are OS and compiler dependent.
   Windows:  [OMPPARAMS] = '-DUSEOMP' 'OPTIMFLAGS="$OPTIMFLAGS' '/openmp"'
   Linux V1: [OMPPARAMS] = '-DUSEOMP' CFLAGS="\$CFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
   Linux V2: [OMPPARAMS] = '-DUSEOMP' CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-To compile without OpenMP simply omit [OMPPARAMS], note that code will be single threaded in this case.
+To compile without OpenMP simply omit [OMPPARAMS]; note that code will be single threaded in this case.
 
 d) Add edge detection code to Matlab path (change to current directory first): 
  >> addpath(pwd); savepath;
@@ -73,16 +73,17 @@ f) A fully trained edge model for RGB images is available as part of this releas
 4. Getting Started.
 
  - Make sure to carefully follow the installation instructions above.
- - Please see "edgesDemo.m" and "edgeBoxesDemo" to run demos and get basic usage information.
+ - Please see "edgesDemo.m", "edgeBoxesDemo" and "spDemo.m" to run demos and get basic usage information.
  - For a detailed list of functionality see "Contents.m".
 
 ###################################################################
 
 5. History.
 
-Version NEW
+Version 3.0 (07/15/2014)
  - added Edge Boxes code corresponding to ECCV paper
  - added Sticky Superpixels code
+ - edge detection code unchanged
 
 Version 2.0 (06/20/2014)
  - second version corresponding to arXiv paper
