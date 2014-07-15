@@ -73,6 +73,7 @@ private:
   void scoreAllBoxes( Boxes &boxes );
   void scoreBox( Box &box );
   void refineBox( Box &box );
+  void drawBox( Box &box, arrayf &E, arrayf &V );
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -332,6 +333,28 @@ void EdgeBoxGenerator::refineBox( Box &box )
     if(B.s<=box.s) { B.w=B.w-cStep; scoreBox(B); }
     if(B.s>box.s) box=B;
   }
+}
+
+void EdgeBoxGenerator::drawBox( Box &box, arrayf &E, arrayf &V )
+{
+  // score box and draw color coded edges (red=out, green=in)
+  int i, c, r; float e, o; if( !V._x ) return;
+  int sId=_sId; scoreBox(box); int c0, r0, c1, r1;
+  r1=clamp(box.r+box.h,0,h-1); r0=box.r=clamp(box.r,0,h-1);
+  c1=clamp(box.c+box.w,0,w-1); c0=box.c=clamp(box.c,0,w-1);
+  for( c=0; c<w; c++ ) for( r=0; r<h; r++ )
+    V.val(c+w*0,r)=V.val(c+w*1,r)=V.val(c+w*2,r)=1;
+  for( c=0; c<w; c++ ) for( r=0; r<h; r++ ) {
+    i=_segIds.val(c,r); if(i<=0) continue; e = E.val(c,r);
+    o = (_sDone._x[i]==sId) ? _sWts._x[_sMap._x[i]] :
+      (_segC[i]>=c0 && _segC[i]<=c1 && _segR[i]>=r0 && _segR[i]<=r1 ) ? 0 : 1;
+    V.val(c+w*0,r)=1-e+e*o; V.val(c+w*1,r)=1-e*o; V.val(c+w*2,r)=1-e;
+  }
+  // finally draw bounding box
+  r=r0; for(c=c0; c<=c1; c++) V.val(c+w*0,r)=V.val(c+w*1,r)=V.val(c+w*2,r)=0;
+  r=r1; for(c=c0; c<=c1; c++) V.val(c+w*0,r)=V.val(c+w*1,r)=V.val(c+w*2,r)=0;
+  c=c0; for(r=r0; r<=r1; r++) V.val(c+w*0,r)=V.val(c+w*1,r)=V.val(c+w*2,r)=0;
+  c=c1; for(r=r0; r<=r1; r++) V.val(c+w*0,r)=V.val(c+w*1,r)=V.val(c+w*2,r)=0;
 }
 
 void EdgeBoxGenerator::scoreAllBoxes( Boxes &boxes )
