@@ -37,3 +37,4 @@
 % Sticky Edge Adhesive Superpixel code:
 %   spDemo          - Demo for Sticky Superpixels (please see readme.txt first).
 %   spDetect        - Detect Sticky Superpixels in image.
+%   spDistances     - Compute superpixel distances and optionally corresponding edge map.

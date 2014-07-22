@@ -14,6 +14,10 @@ opts.merge = 0;   % set to small value to merge nearby superpixels at end
 
 %% detect and display superpixels (see spDetect.m)
 I = imread('peppers.png');
-E = edgesDetect(I,model);
+[E,~,~,segs]=edgesDetect(I,model);
 tic, [S,V] = spDetect(I,E,opts); toc
 figure(1); im(V);
+
+%% Convert superpixels boundaries back to edges (see spAffinities).
+tic, [A,SE]=spAffinities(S,E,segs); toc
+figure(2); im(1-SE);

@@ -5,13 +5,16 @@
 * Licensed under the MSR-LA Full Rights License [see license.txt]
 *******************************************************************************/
 #include <mex.h>
+#include <math.h>
 #include <string.h>
 #ifdef USEOMP
 #include <omp.h>
 #endif
 
 typedef unsigned int uint;
+typedef unsigned char uint8;
 template<typename T> inline T min( T x, T y ) { return x<y ? x : y; }
+template<typename T> inline T max( T x, T y ) { return x<y ? y : x; }
 
 // run STICKY to refine superpixels (operates in place)
 void sticky( uint *S, float *I, float *E, uint h, uint w, double *prm )
@@ -185,6 +188,87 @@ void visualize( float *V, float *I, uint *S, uint h, uint w, bool bnds ) {
   delete [] clrs; delete [] cnts;
 }
 
+// compute affinity matrix of affinities between all nearby superpixels
+void affinities( float *A, uint8 *segs, float *E, uint *S, uint h, uint w )
+{
+  const uint g=16, stride=2, nTreesEval=4, nThreads=4;
+  const uint w1=uint(ceil(double(w)/4))*4/stride;
+  const uint h1=uint(ceil(double(h)/4))*4/stride;
+  uint m=0; for( uint x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m; m++;
+  float *wts=new float[w*h], *Sn=new float[m*m], *Sd=new float[m*m];
+  for(uint i=0; i<w*h; i++) wts[i]=1/(1+exp((E[i]-.05f)*50.f));
+  #pragma omp parallel for num_threads(nThreads)
+  for( int x=0; x<int(w); x+=stride ) {
+    int xi, x0, x1, y, yi, y0, y1, r=g/2;
+    uint i, j, s, m1, s1, t, lbl, ind, nTreesConst;
+    uint *lookup, *lbls1; float *wts1;
+    lookup=new uint[m]; lbls1=new uint[g*g]; wts1=new float[m*25];
+    for( y=0; y<int(h); y+=stride ) {
+      // create consecutively labeled copy of local label mask
+      x0=max(-r,-x); x1=min(r,int(w)-x); y0=max(-r,-y); y1=min(r,int(h)-y);
+      lookup[0]=S[(x+x0)*h+y+y0]; wts1[0]=0; j=0; m1=1; nTreesConst=0;
+      for( xi=x0; xi<x1; xi++ ) for( yi=y0; yi<y1; yi++ ) {
+        lbl = S[ (x+xi)*h + y+yi ];
+        if( lbl==lookup[j] ) { i=j; } else {
+          for( i=0; i<m1; i++ ) if(lookup[i]==lbl) break;
+          if(i==m1) { lookup[m1]=lbl; wts1[m1]=0; m1++; }
+        }
+        lbls1[(xi+r)*g+yi+r]=i; j=i; wts1[i]+=wts[(x+xi)*h + y+yi];
+      }
+      // loop over nTreesEval segmentation masks
+      for( t=0; t<nTreesEval; t++ ) {
+        ind = y/stride + x/stride*h1 + t*h1*w1;
+        const uint8 *seg=segs+ind*g*g; s1=0;
+        // compute number of segments s1 in seg
+        for( xi=x0; xi<x1; xi++ ) for( yi=y0; yi<y1; yi++ ) {
+          i=(xi+r)*g+yi+r; if(seg[i]>s1) s1=seg[i]; }
+        s1++; if( s1==1 ) { nTreesConst++; continue; }
+        // populate per-label wts1 (starting at column 1)
+        for( i=m1; i<m1*(s1+1); i++ ) wts1[i]=0;
+        for( xi=x0; xi<x1; xi++ ) for( yi=y0; yi<y1; yi++ ) {
+          i=(xi+r)*g+yi+r; wts1[lbls1[i]+(seg[i]+1)*m1] += wts[(x+xi)*h+y+yi];
+        }
+        // update numerator of similarity matrix Sn
+        for( s=1; s<=s1; s++ ) for( i=0; i<m1; i++ ) for( j=0; j<m1; j++ )
+          Sn[lookup[i]*m+lookup[j]] += wts1[i+s*m1]*wts1[j+s*m1];
+      }
+      // update Sn same way as Sd for skipped uniform patches
+      if(nTreesConst) for( i=0; i<m1; i++ ) for( j=0; j<m1; j++ )
+        Sn[lookup[i]*m+lookup[j]] += wts1[i]*wts1[j]*nTreesConst;
+      // update denominator of similarity matrix Sd
+      for( i=0; i<m1; i++ ) for( j=0; j<m1; j++ )
+        Sd[lookup[i]*m+lookup[j]] += wts1[i]*wts1[j]*nTreesEval;
+    }
+    delete [] lookup; delete [] lbls1; delete [] wts1;
+  }
+  // compute affinities matrix A
+  for( uint s=1; s<m; s++ ) for( uint t=1; t<m; t++ ) if( Sd[s*m+t] ) {
+    A[(s-1)*(m-1)+(t-1)] = 1 - max( 0.f,
+      Sn[s*m+s]/Sd[s*m+s]/2 + Sn[t*m+t]/Sd[t*m+t]/2 - Sn[s*m+t]/Sd[s*m+t] );
+  }
+  delete [] wts; delete [] Sn; delete [] Sd;
+
+}
+
+// compute superpixel edge strength given affinities matrix
+void edges( float *E, uint *S, uint h, uint w, float *A )
+{
+  uint x, y, x0, x1, xi, y0, y1, yi, i, j, s, n, ss[9];
+  uint m=0; for( x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m;
+  for( x=0; x<w; x++ ) for( y=0; y<h; y++ ) {
+    if( S[x*h+y]!=0 ) continue; n=0; E[x*h+y]=.01f;
+    x0 = (x==0) ? 0 : x-1; x1 = (x==w-1) ? w-1 : x+1;
+    y0 = (y==0) ? 0 : y-1; y1 = (y==h-1) ? h-1 : y+1;
+    for( xi=x0; xi<=x1; xi++ ) for( yi=y0; yi<=y1; yi++ ) {
+      s=S[xi*h+yi]; if(!s) continue; bool isnew=1; s--;
+      for( i=0; i<n; i++ ) if(s==ss[i]) { isnew=0; break; }
+      if(isnew) ss[n++]=s;
+    }
+    for( i=0; i<n; i++ ) for( j=i+1; j<n; j++ )
+      E[x*h+y] = max(1-A[ss[i]*m+ss[j]],E[x*h+y]);
+  }
+}
+
 // inteface to various superpixel helpers
 void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
 {
@@ -236,5 +320,28 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
     pl[0] = mxCreateNumericArray(3,dims,mxSINGLE_CLASS,mxREAL);
     float* V = (float*) mxGetData(pl[0]);
     visualize(V,I,S,h,w,bnds);
-  }
+
+  } else if(!strcmp(action,"affinities")) {
+    // A = affinities( S, E, segs )
+    uint* S = (uint*) mxGetData(pr[0]);
+    float *E  = (float*) mxGetData(pr[1]);
+    uint8 *segs  = (uint8*) mxGetData(pr[2]);
+    uint h = (uint) mxGetM(pr[0]);
+    uint w = (uint) mxGetN(pr[0]);
+    uint m=0; for( uint x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m;
+    pl[0] = mxCreateNumericMatrix(m,m,mxSINGLE_CLASS,mxREAL);
+    float *A = (float*) mxGetData(pl[0]);
+    affinities(A,segs,E,S,h,w);
+
+  } else if(!strcmp(action,"edges")) {
+    // E = edges(S,A);
+    uint* S = (uint*) mxGetData(pr[0]);
+    float* A = (float*) mxGetData(pr[1]);
+    uint h = (uint) mxGetM(pr[0]);
+    uint w = (uint) mxGetN(pr[0]);
+    pl[0] = mxCreateNumericMatrix(h,w,mxSINGLE_CLASS,mxREAL);
+    float *E = (float*) mxGetData(pl[0]);
+    edges(E,S,h,w,A);
+
+  } else mexErrMsgTxt("Invalid action.");
 }
