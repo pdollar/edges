@@ -96,50 +96,49 @@ void relabel( uint *S, uint h, uint w ) {
   delete [] T; delete [] map;
 }
 
-// compute superpixel boundaries using 8-connected neighborhood
-void boundaries( uint *T, uint *S, float *E, int h, int w, uint nThreads )
-{
-  // make 1-indexed copy of S
-  for( int x=0; x<w*h; x++ ) T[x]=S[x]+1;
-  // add 4-connectivity boundary greedily
-  #ifdef USEOMP
-  nThreads = min(nThreads,uint(omp_get_max_threads()));
-  #pragma omp parallel for num_threads(nThreads)
-  #endif
-  for( int x=0; x<w; x++ ) for( int y=0; y<h; y++ ) {
-    uint a=x*h+y, b=(x+1)*h+y, c=x*h+(y+1), s=S[a];
-    if(x<w-1 && s!=S[b]) if(E[a]>E[b]) T[a]=0; else T[b]=0;
-    if(y<h-1 && s!=S[c]) if(E[a]>E[c]) T[a]=0; else T[c]=0;
-  }
-  // add 8-connectivity boundary
-  #ifdef USEOMP
-  #pragma omp parallel for num_threads(nThreads)
-  #endif
-  for( int x=1; x<w-1; x++ ) for( int y=1; y<h-1; y++ ) {
-    uint *L=T+x*h+y, i, t=L[0]; if(t==0) continue;
-    const uint N[8]={L[-h],L[h],L[-1],L[1],L[-h-1],L[-h+1],L[h-1],L[h+1]};
-    if( N[0] && N[1] && N[2] && N[3] ) continue;
-    for( i=0; i<8; i++ ) if(N[i] && N[i]!=t) { L[0]=0; break; }
-  }
-  // remove excess boundary pixels
-  #ifdef USEOMP
-  #pragma omp parallel for num_threads(nThreads)
-  #endif
-  for( int x=1; x<w-1; x++ ) for( int y=1; y<h-1; y++ ) {
-    uint *L=T+x*h+y, i, t=L[0]; if(t!=0) continue; t=L[0]=S[x*h+y]+1;
-    const uint N[8]={L[-h],L[h],L[-1],L[1],L[-h-1],L[-h+1],L[h-1],L[h+1]};
-    for( i=0; i<8; i++ ) if(N[i] && N[i]!=t) { L[0]=0; break; }
-  }
-}
-
-// merge segments S that are separated by a weak boundary
-void merge( uint *T, uint *S, float *E, int h, int w, float thr )
+// add boundaries to superpixels using 8-connected neighbors (operates in place)
+void boundaries( uint *S, float *E, int h, int w, uint nThreads )
 {
   // helper
   #define NEIGHBORS8(S) uint *L=S+x*h+y; int x0, y0, x1, y1; \
     x0 = (x==0) ? 0 : -h; x1 = (x==w-1) ? 0 : h; \
     y0 = (y==0) ? 0 : -1; y1 = (y==h-1) ? 0 : 1; \
     uint N[8]={L[x0],L[x1],L[y0],L[y1],L[x0+y0],L[x0+y1],L[x1+y0],L[x1+y1]};
+  // make S 1-indexed
+  for( int x=0; x<w*h; x++ ) S[x]++;
+  // add 4-connectivity boundary greedily
+  #ifdef USEOMP
+  nThreads = min(nThreads,uint(omp_get_max_threads()));
+  #pragma omp parallel for num_threads(nThreads)
+  #endif
+  for( int x=0; x<w; x++ ) for( int y=0; y<h; y++ ) {
+    uint a=x*h+y, b=(x+1)*h+y, c=x*h+(y+1), s=S[a]; if(s==0) continue;
+    if(x<w-1 && s!=S[b] && S[b]>0) if(E[a]>E[b]) S[a]=0; else S[b]=0;
+    if(y<h-1 && s!=S[c] && S[c]>0) if(E[a]>E[c]) S[a]=0; else S[c]=0;
+  }
+  // add 8-connectivity boundary
+  #ifdef USEOMP
+  #pragma omp parallel for num_threads(nThreads)
+  #endif
+  for( int x=0; x<w; x++ ) for( int y=0; y<h; y++ ) {
+    NEIGHBORS8(S); uint i, s=L[0]; if(s==0) continue;
+    if( N[0] && N[1] && N[2] && N[3] ) continue;
+    for( i=0; i<8; i++ ) if(N[i] && N[i]!=s) { L[0]=0; break; }
+  }
+  // remove excess boundary pixels
+  #ifdef USEOMP
+  #pragma omp parallel for num_threads(nThreads)
+  #endif
+  for( int x=0; x<w; x++ ) for( int y=0; y<h; y++ ) {
+    NEIGHBORS8(S); uint i, s=L[0]; if(s!=0) continue;
+    for( i=0; i<8; i++ ) if(N[i]) { s=L[0]=N[i]; break; }
+    for( i=0; i<8; i++ ) if(N[i] && N[i]!=s) { L[0]=0; break; }
+  }
+}
+
+// merge segments S that are separated by a weak boundary
+void merge( uint *T, uint *S, float *E, int h, int w, float thr )
+{
   // compute m and min for each region
   int x; uint m=0; for( x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m; m++;
   float *es=new float[m]; for( x=0; x<int(m); x++ ) es[x]=1000;
@@ -295,8 +294,8 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
     uint h = (uint) mxGetM(pr[0]);
     uint w = (uint) mxGetN(pr[0]);
     pl[0] = mxCreateNumericMatrix(h,w,mxUINT32_CLASS,mxREAL);
-    uint* S = (uint*) mxGetData(pl[0]);
-    boundaries(S,S0,E,h,w,nThreads);
+    uint* S = (uint*) mxGetData(pl[0]); memcpy(S,S0,h*w*sizeof(uint));
+    boundaries(S,E,h,w,nThreads);
 
   } else if(!strcmp(action,"merge")) {
     // S = wsMerge( S, E, thr );
