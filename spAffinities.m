@@ -1,4 +1,4 @@
-function [A,E,ucm] = spAffinities( S, E, segs, nThreads )
+function [A,E,U] = spAffinities( S, E, segs, nThreads )
 % Compute superpixel affinities and optionally corresponding edge map.
 %
 % Computes an m x m affinity matrix A where A(i,j) is the affinity between
@@ -22,15 +22,18 @@ function [A,E,ucm] = spAffinities( S, E, segs, nThreads )
 % is unnecessary. Given reasonable superpixels, the superpixel edges have
 % high benchmark scores (ODS/OIS/AP) similar to the edges from edgesDetect.
 %
-% Finally, given the superpixel edges, the ultrametric contour map (ucm)
-% may be computed. This requires the Berkeley ucm code available from:
-%  http://www.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/
-% Specifically, the file ucm_mean_pb must be compiled and in private/.
-% Thresholding a ucm at any value results in a valid segmentation (the same
-% is not true of the original edge map). For details see the Berkeley site.
+% Finally, given the superpixel edges, the ultrametric contour map (UCM)
+% can be computed. The UCM is an edge map with the remarkable property that
+% when thresholded at any value it produces a set of closed curves (the
+% same is not true of the original edge map). In other words the UCM is a
+% soft representation of a segmentation. For more details see "From
+% Contours to Regions: An Empirical Evaluation" by Pablo Arbelaez et al. in
+% CVPR 2009. Computing the UCM requires the mex file ucm_mean_pb.
+% Pre-compiled binaries for some systems are provided in /private, source
+% for ucm_mean_pb is available as part of the BSDS500 dataset (see readme).
 %
 % USAGE
-%  [A,E,ucm] = spAffinities( S, E, segs, [nThreads] )
+%  [A,E,U] = spAffinities( S, E, segs, [nThreads] )
 %
 % INPUTS
 %  S          - [h x w] superpixel label map (S==0 are boundaries)
@@ -41,7 +44,7 @@ function [A,E,ucm] = spAffinities( S, E, segs, nThreads )
 % OUTPUTS
 %  A          - [m x m] superpixel affinity matrix
 %  E          - [h x w] superpixel edge probability map
-%  ucm        - [h x w] ultrametric contour map (segmenation)
+%  U          - [h x w] ultrametric contour map (segmenation)
 %
 % EXAMPLE
 %
@@ -55,19 +58,17 @@ function [A,E,ucm] = spAffinities( S, E, segs, nThreads )
 if(nargin<4 || isempty(nThreads)), nThreads=4; end
 A = spDetectMex('affinities',S,E,segs,nThreads);
 if(nargout>1), E = spDetectMex('edges',S,A); end
-if(nargout>2), ucm = computeUcm( E ); end
+if(nargout>2), U = computeUcm( E ); end
 
 end
 
-function ucm = computeUcm( E )
+function U = computeUcm( E )
 % creates ultrametric contour map from SP contours
-if(exist('ucm_mean_pb','file')~=3),
-  warning('ucm code not found, please see help.'); end
 E = upsampleEdges(E);
 S=bwlabel(E==0,8); S=S(2:2:end,2:2:end)-1;
 S(end,:)=S(end-1,:); S(:,end)=S(:,end-1);
 E(end+1,:)=E(end,:); E(:,end+1)=E(:,end);
-ucm=ucm_mean_pb(E,S); ucm=ucm(1:2:end-2,1:2:end-2);
+U=ucm_mean_pb(E,S); U=U(1:2:end-2,1:2:end-2);
 end
 
 function E = upsampleEdges( E0 )

@@ -34,7 +34,7 @@ function [S,V] = spDetect( I, E, varargin )
 %
 % EXAMPLE
 %
-% See also spDemo, watershed
+% See also spDemo, spAffinities, watershed
 %
 % Structured Edge Detection Toolbox      Version 3.0
 % Copyright 2014 Piotr Dollar.  [pdollar-at-microsoft.com]
