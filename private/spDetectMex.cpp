@@ -16,9 +16,8 @@ typedef unsigned char uint8;
 template<typename T> inline T min( T x, T y ) { return x<y ? x : y; }
 template<typename T> inline T max( T x, T y ) { return x<y ? y : x; }
 
-// run STICKY to refine superpixels (operates in place)
-void sticky( uint *S, float *I, float *E, uint h, uint w, double *prm )
-{
+// refine sticky superpixels given image and edge data
+void sticky( uint *S, uint h, uint w, float *I, float *E, double *prm ) {
   // get additional parameters
   const uint maxIter=uint(prm[0]); uint nThreads=uint(prm[1]);
   const float sigs=float(prm[2]), sigx=float(prm[3]);
@@ -67,13 +66,12 @@ void sticky( uint *S, float *I, float *E, uint h, uint w, double *prm )
         for(j=0; j<5; j++) mus[t*5+j]=(mus[t*5+j]*(ns[t]-1)+vs[j])/ns[t];
       }
     }
-    if(0) mexPrintf("iter=%i changed=%f%%\n",iter,100.f*changed/h/w);
     iter++;
   }
-  delete [] ns; delete [] mus; if(0) mexPrintf("--------------------\n");
+  delete [] ns; delete [] mus;
 }
 
-// relabel superpixels (condense and enforce connectivity, operates in place)
+// relabel superpixels (condense and enforce connectivity)
 void relabel( uint *S, uint h, uint w ) {
   uint *T=new uint[h*w], *map=new uint[h*w/2]();
   uint x, y, z, t, t1, t2, m=1;
@@ -96,23 +94,22 @@ void relabel( uint *S, uint h, uint w ) {
   delete [] T; delete [] map;
 }
 
-// add boundaries to superpixels using 8-connected neighbors (operates in place)
-void boundaries( uint *S, float *E, int h, int w, uint nThreads )
-{
+// make superpixels 1-indexed and add boundaries with value 0
+void boundaries( uint *S, uint h, uint w, float *E, uint nThreads ) {
   // helper
   #define NEIGHBORS8(S) uint *L=S+x*h+y; int x0, y0, x1, y1; \
-    x0 = (x==0) ? 0 : -h; x1 = (x==w-1) ? 0 : h; \
+    x0 = (x==0) ? 0 : -1; x1 = (x==w-1) ? 0 : 1; x0*=h; x1*=h; \
     y0 = (y==0) ? 0 : -1; y1 = (y==h-1) ? 0 : 1; \
     uint N[8]={L[x0],L[x1],L[y0],L[y1],L[x0+y0],L[x0+y1],L[x1+y0],L[x1+y1]};
   // make S 1-indexed
-  for( int x=0; x<w*h; x++ ) S[x]++;
+  for( uint x=0; x<w*h; x++ ) S[x]++;
   // add 4-connectivity boundary greedily
   #ifdef USEOMP
   nThreads = min(nThreads,uint(omp_get_max_threads()));
   #pragma omp parallel for num_threads(nThreads)
   #endif
-  for( int x=0; x<w; x++ ) for( int y=0; y<h; y++ ) {
-    uint a=x*h+y, b=(x+1)*h+y, c=x*h+(y+1), s=S[a]; if(s==0) continue;
+  for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
+    uint x=xi; uint a=x*h+y, b=(x+1)*h+y, c=x*h+(y+1), s=S[a]; if(s==0) continue;
     if(x<w-1 && s!=S[b] && S[b]>0) if(E[a]>E[b]) S[a]=0; else S[b]=0;
     if(y<h-1 && s!=S[c] && S[c]>0) if(E[a]>E[c]) S[a]=0; else S[c]=0;
   }
@@ -120,8 +117,8 @@ void boundaries( uint *S, float *E, int h, int w, uint nThreads )
   #ifdef USEOMP
   #pragma omp parallel for num_threads(nThreads)
   #endif
-  for( int x=0; x<w; x++ ) for( int y=0; y<h; y++ ) {
-    NEIGHBORS8(S); uint i, s=L[0]; if(s==0) continue;
+  for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
+    uint x=xi; NEIGHBORS8(S); uint i, s=L[0]; if(s==0) continue;
     if( N[0] && N[1] && N[2] && N[3] ) continue;
     for( i=0; i<8; i++ ) if(N[i] && N[i]!=s) { L[0]=0; break; }
   }
@@ -129,23 +126,22 @@ void boundaries( uint *S, float *E, int h, int w, uint nThreads )
   #ifdef USEOMP
   #pragma omp parallel for num_threads(nThreads)
   #endif
-  for( int x=0; x<w; x++ ) for( int y=0; y<h; y++ ) {
-    NEIGHBORS8(S); uint i, s=L[0]; if(s!=0) continue;
+  for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
+    uint x=xi; NEIGHBORS8(S); uint i, s=L[0]; if(s!=0) continue;
     for( i=0; i<8; i++ ) if(N[i]) { s=L[0]=N[i]; break; }
     for( i=0; i<8; i++ ) if(N[i] && N[i]!=s) { L[0]=0; break; }
   }
 }
 
 // merge segments S that are separated by a weak boundary
-void merge( uint *T, uint *S, float *E, int h, int w, float thr )
-{
+void merge( uint *S, uint h, uint w, float *E, float thr ) {
   // compute m and min for each region
-  int x; uint m=0; for( x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m; m++;
-  float *es=new float[m]; for( x=0; x<int(m); x++ ) es[x]=1000;
+  uint x; uint m=0; for( x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m; m++;
+  float *es=new float[m]; for( x=0; x<m; x++ ) es[x]=1000;
   for( x=0; x<w*h; x++ ) es[S[x]]=min(E[x],es[S[x]]);
   // check for regions to merge and compute label mapping
   uint *map = new uint[m]();
-  for( x=0; x<w; x++ ) for( int y=0; y<h; y++ ) if( S[x*h+y]==0 ) {
+  for( x=0; x<w; x++ ) for( uint y=0; y<h; y++ ) if( S[x*h+y]==0 ) {
     uint i, j, s, s1, s2, k=0, U[8]; NEIGHBORS8(S);
     for( i=0; i<8; i++ ) if( (s=N[i])!=0 ) {
       for( j=0; j<k; j++ ) if(s==U[j]) break; if(j==k) U[k++]=s;
@@ -162,16 +158,16 @@ void merge( uint *T, uint *S, float *E, int h, int w, float thr )
   }
   // perform mapping and remove obsolete boundaries
   uint m1=1; for( uint s=1; s<m; s++ ) map[s] = map[s] ? map[map[s]] : m1++;
-  for( x=0; x<w*h; x++ ) if(S[x]) T[x]=map[S[x]];
-  for( x=0; x<w; x++ ) for( int y=0; y<h; y++ ) if( T[x*h+y]==0 ) {
-    uint i, s=0; NEIGHBORS8(T); for(i=0; i<8; i++) if(N[i]) { s=N[i]; break; }
-    for( i; i<8; i++ ) if(N[i] && N[i]!=s) break; if(i==8) T[x*h+y]=s;
+  for( x=0; x<w*h; x++ ) if(S[x]) S[x]=map[S[x]];
+  for( x=0; x<w; x++ ) for( uint y=0; y<h; y++ ) if( S[x*h+y]==0 ) {
+    uint i, s=0; NEIGHBORS8(S); for(i=0; i<8; i++) if(N[i]) { s=N[i]; break; }
+    for( i; i<8; i++ ) if(N[i] && N[i]!=s) break; if(i==8) S[x*h+y]=s;
   }
   delete [] es; delete [] map;
 }
 
 // compute visualization of superpixels
-void visualize( float *V, float *I, uint *S, uint h, uint w, bool bnds ) {
+void visualize( float *V, uint *S, uint h, uint w, float *I, bool hasBnds ) {
   uint i, z, n=h*w;
   uint m=0; for( uint x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m; m++;
   float *clrs=new float[m]; uint *cnts=new uint[n];
@@ -181,15 +177,14 @@ void visualize( float *V, float *I, uint *S, uint h, uint w, bool bnds ) {
     for( i=0; i<m; i++ ) clrs[i]=0;
     for( i=0; i<n; i++ ) clrs[S[i]]+=I[z*n+i];
     for( i=0; i<m; i++ ) clrs[i]/=cnts[i];
-    if( bnds ) clrs[0]=0;
+    if( hasBnds ) clrs[0]=0;
     for( i=0; i<n; i++ ) V[z*n+i]=clrs[S[i]];
   }
   delete [] clrs; delete [] cnts;
 }
 
-// compute affinity matrix of affinities between all nearby superpixels
-void affinities( float *A, uint8 *segs, float *E, uint *S, uint h, uint w )
-{
+// compute affinities between all nearby superpixels
+void affinities( float *A, uint *S, uint h, uint w, float *E, uint8 *segs ) {
   const uint g=16, stride=2, nTreesEval=4, nThreads=4;
   const uint w1=uint(ceil(double(w)/4))*4/stride;
   const uint h1=uint(ceil(double(h)/4))*4/stride;
@@ -250,8 +245,7 @@ void affinities( float *A, uint8 *segs, float *E, uint *S, uint h, uint w )
 }
 
 // compute superpixel edge strength given affinities matrix
-void edges( float *E, uint *S, uint h, uint w, float *A )
-{
+void edges( float *E, uint *S, uint h, uint w, float *A ) {
   uint x, y, x0, x1, xi, y0, y1, yi, i, j, s, n, ss[9];
   uint m=0; for( x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m;
   for( x=0; x<w; x++ ) for( y=0; y<h; y++ ) {
@@ -269,75 +263,60 @@ void edges( float *E, uint *S, uint h, uint w, float *A )
 }
 
 // inteface to various superpixel helpers
-void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
-{
+void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] ) {
   int f; char action[1024]; f=mxGetString(pr[0],action,1024); nr--; pr++;
+  uint *S = (uint*) mxGetData(pr[0]);
+  uint h = (uint) mxGetM(pr[0]);
+  uint w = (uint) mxGetN(pr[0]);
+
   if(f) { mexErrMsgTxt("Failed to get action.");
 
   } else if(!strcmp(action,"sticky")) {
     // S = sticky( S, I, E, prm )
-    uint *S0 = (uint*) mxGetData(pr[0]);
     float *I = (float*) mxGetData(pr[1]);
     float *E = (float*) mxGetData(pr[2]);
     double *prm = (double*) mxGetData(pr[3]);
-    uint h = (uint) mxGetM(pr[0]);
-    uint w = (uint) mxGetN(pr[0]);
     pl[0] = mxCreateNumericMatrix(h,w,mxUINT32_CLASS,mxREAL);
-    uint* S = (uint*) mxGetData(pl[0]); memcpy(S,S0,h*w*sizeof(uint));
-    sticky(S,I,E,h,w,prm); relabel(S,h,w);
+    uint* T = (uint*) mxGetData(pl[0]); memcpy(T,S,h*w*sizeof(uint));
+    sticky(T,h,w,I,E,prm); relabel(T,h,w);
 
   } else if(!strcmp(action,"boundaries")) {
     // S = boundaries( S, E, nThreads )
-    uint *S0 = (uint*) mxGetData(pr[0]);
     float *E = (float*) mxGetData(pr[1]);
     uint nThreads = (int) mxGetScalar(pr[2]);
-    uint h = (uint) mxGetM(pr[0]);
-    uint w = (uint) mxGetN(pr[0]);
     pl[0] = mxCreateNumericMatrix(h,w,mxUINT32_CLASS,mxREAL);
-    uint* S = (uint*) mxGetData(pl[0]); memcpy(S,S0,h*w*sizeof(uint));
-    boundaries(S,E,h,w,nThreads);
+    uint* T = (uint*) mxGetData(pl[0]); memcpy(T,S,h*w*sizeof(uint));
+    boundaries(T,h,w,E,nThreads);
 
   } else if(!strcmp(action,"merge")) {
-    // S = wsMerge( S, E, thr );
-    uint *S = (uint*) mxGetData(pr[0]);
+    // S = merge( S, E, thr );
     float *E = (float*) mxGetData(pr[1]);
     float thr = (float) mxGetScalar(pr[2]);
-    uint h = (uint) mxGetM(pr[0]);
-    uint w = (uint) mxGetN(pr[0]);
     pl[0] = mxCreateNumericMatrix(h,w,mxUINT32_CLASS,mxREAL);
-    uint* T = (uint*) mxGetData(pl[0]);
-    merge(T,S,E,h,w,thr);
+    uint* T = (uint*) mxGetData(pl[0]); memcpy(T,S,h*w*sizeof(uint));
+    merge(T,h,w,E,thr);
 
   } else if(!strcmp(action,"visualize")) {
-    // V = visualize( S, I, boundaries )
-    uint *S = (uint*) mxGetData(pr[0]);
+    // V = visualize( S, I, hasBnds )
     float *I = (float*) mxGetData(pr[1]);
-    bool bnds = mxGetScalar(pr[2])>0;
-    uint h = (uint) mxGetM(pr[0]);
-    uint w = (uint) mxGetN(pr[0]);
+    bool hasBnds = mxGetScalar(pr[2])>0;
     const int dims[3] = {h,w,3};
     pl[0] = mxCreateNumericArray(3,dims,mxSINGLE_CLASS,mxREAL);
     float* V = (float*) mxGetData(pl[0]);
-    visualize(V,I,S,h,w,bnds);
+    visualize(V,S,h,w,I,hasBnds);
 
   } else if(!strcmp(action,"affinities")) {
     // A = affinities( S, E, segs )
-    uint* S = (uint*) mxGetData(pr[0]);
     float *E  = (float*) mxGetData(pr[1]);
     uint8 *segs  = (uint8*) mxGetData(pr[2]);
-    uint h = (uint) mxGetM(pr[0]);
-    uint w = (uint) mxGetN(pr[0]);
     uint m=0; for( uint x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m;
     pl[0] = mxCreateNumericMatrix(m,m,mxSINGLE_CLASS,mxREAL);
     float *A = (float*) mxGetData(pl[0]);
-    affinities(A,segs,E,S,h,w);
+    affinities(A,S,h,w,E,segs);
 
   } else if(!strcmp(action,"edges")) {
     // E = edges(S,A);
-    uint* S = (uint*) mxGetData(pr[0]);
     float* A = (float*) mxGetData(pr[1]);
-    uint h = (uint) mxGetM(pr[0]);
-    uint w = (uint) mxGetN(pr[0]);
     pl[0] = mxCreateNumericMatrix(h,w,mxSINGLE_CLASS,mxREAL);
     float *E = (float*) mxGetData(pl[0]);
     edges(E,S,h,w,A);
