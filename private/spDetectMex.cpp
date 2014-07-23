@@ -133,7 +133,7 @@ void boundaries( uint *S, uint h, uint w, float *E, uint nThreads ) {
   }
 }
 
-// merge segments S that are separated by a weak boundary
+// merge superpixels that are separated by a weak boundary
 void merge( uint *S, uint h, uint w, float *E, float thr ) {
   // compute m and min for each region
   uint x; uint m=0; for( x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m; m++;
@@ -184,14 +184,18 @@ void visualize( float *V, uint *S, uint h, uint w, float *I, bool hasBnds ) {
 }
 
 // compute affinities between all nearby superpixels
-void affinities( float *A, uint *S, uint h, uint w, float *E, uint8 *segs ) {
-  const uint g=16, stride=2, nTreesEval=4, nThreads=4;
-  const uint w1=uint(ceil(double(w)/4))*4/stride;
-  const uint h1=uint(ceil(double(h)/4))*4/stride;
+void affinities( float *A, uint *S, uint h, uint w, float *E,
+  uint8 *segs, uint *dims, uint nThreads )
+{
+  const uint g=dims[0], h1=dims[2], w1=dims[3], nTreesEval=dims[4];
+  const uint stride=uint( float(h)/float(h1) + .5f );
   uint m=0; for( uint x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m; m++;
   float *wts=new float[w*h], *Sn=new float[m*m], *Sd=new float[m*m];
   for(uint i=0; i<w*h; i++) wts[i]=1/(1+exp((E[i]-.05f)*50.f));
+  #ifdef USEOMP
+  nThreads = min(nThreads,uint(omp_get_max_threads()));
   #pragma omp parallel for num_threads(nThreads)
+  #endif
   for( int x=0; x<int(w); x+=stride ) {
     int xi, x0, x1, y, yi, y0, y1, r=g/2;
     uint i, j, s, m1, s1, t, lbl, ind, nTreesConst;
@@ -237,11 +241,10 @@ void affinities( float *A, uint *S, uint h, uint w, float *E, uint8 *segs ) {
   }
   // compute affinities matrix A
   for( uint s=1; s<m; s++ ) for( uint t=1; t<m; t++ ) if( Sd[s*m+t] ) {
-    A[(s-1)*(m-1)+(t-1)] = 1 - max( 0.f,
-      Sn[s*m+s]/Sd[s*m+s]/2 + Sn[t*m+t]/Sd[t*m+t]/2 - Sn[s*m+t]/Sd[s*m+t] );
+    float d = Sn[s*m+s]/Sd[s*m+s]/2+Sn[t*m+t]/Sd[t*m+t]/2-Sn[s*m+t]/Sd[s*m+t];
+    A[(s-1)*(m-1)+(t-1)] = 1 - max( 0.f, d );
   }
   delete [] wts; delete [] Sn; delete [] Sd;
-
 }
 
 // compute superpixel edge strength given affinities matrix
@@ -283,7 +286,7 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] ) {
   } else if(!strcmp(action,"boundaries")) {
     // S = boundaries( S, E, nThreads )
     float *E = (float*) mxGetData(pr[1]);
-    uint nThreads = (int) mxGetScalar(pr[2]);
+    uint nThreads = (uint) mxGetScalar(pr[2]);
     pl[0] = mxCreateNumericMatrix(h,w,mxUINT32_CLASS,mxREAL);
     uint* T = (uint*) mxGetData(pl[0]); memcpy(T,S,h*w*sizeof(uint));
     boundaries(T,h,w,E,nThreads);
@@ -306,13 +309,16 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] ) {
     visualize(V,S,h,w,I,hasBnds);
 
   } else if(!strcmp(action,"affinities")) {
-    // A = affinities( S, E, segs )
+    // A = affinities( S, E, segs, nThreads )
     float *E  = (float*) mxGetData(pr[1]);
     uint8 *segs  = (uint8*) mxGetData(pr[2]);
+    uint nThreads = (uint) mxGetScalar(pr[3]);
+    if( mxGetNumberOfDimensions(pr[2])!=5 ) mexErrMsgTxt("invalid input");
+    uint *dims = (uint*) mxGetDimensions(pr[2]);
     uint m=0; for( uint x=0; x<w*h; x++ ) m=S[x]>m ? S[x] : m;
     pl[0] = mxCreateNumericMatrix(m,m,mxSINGLE_CLASS,mxREAL);
     float *A = (float*) mxGetData(pl[0]);
-    affinities(A,S,h,w,E,segs);
+    affinities(A,S,h,w,E,segs,dims,nThreads);
 
   } else if(!strcmp(action,"edges")) {
     // E = edges(S,A);

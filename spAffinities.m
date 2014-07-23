@@ -1,4 +1,4 @@
-function [A,E,ucm] = spAffinities( S, E, segs )
+function [A,E,ucm] = spAffinities( S, E, segs, nThreads )
 % Compute superpixel affinities and optionally corresponding edge map.
 %
 % Computes an m x m affinity matrix A where A(i,j) is the affinity between
@@ -30,12 +30,13 @@ function [A,E,ucm] = spAffinities( S, E, segs )
 % is not true of the original edge map). For details see the Berkeley site.
 %
 % USAGE
-%  [A,E] = spAffinities( S, E, segs )
+%  [A,E,ucm] = spAffinities( S, E, segs, [nThreads] )
 %
 % INPUTS
 %  S          - [h x w] superpixel label map (S==0 are boundaries)
 %  E          - [h x w] edge probability map (output of edgesDetect)
 %  segs       - local segmentations (output of edgesDetect)
+%  nThreads   - [4] number of computation threads
 %
 % OUTPUTS
 %  A          - [m x m] superpixel affinity matrix
@@ -51,7 +52,8 @@ function [A,E,ucm] = spAffinities( S, E, segs )
 % Please email me if you find bugs, or have suggestions or questions!
 % Licensed under the MSR-LA Full Rights License [see license.txt]
 
-A = spDetectMex('affinities',S,E,segs);
+if(nargin<4 || isempty(nThreads)), nThreads=4; end
+A = spDetectMex('affinities',S,E,segs,nThreads);
 if(nargout>1), E = spDetectMex('edges',S,A); end
 if(nargout>2), ucm = computeUcm( E ); end
 
