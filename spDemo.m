@@ -19,6 +19,12 @@ I = imread('peppers.png');
 tic, [S,V] = spDetect(I,E,opts); toc
 figure(1); im(I); figure(2); im(V);
 
-%% Compute ultrametric contour map from superpixels (see spAffinities)
+%% compute ultrametric contour map from superpixels (see spAffinities.m)
 tic, [~,~,U]=spAffinities(S,E,segs,opts.nThreads); toc
-figure(3); im(U<.2);
+figure(3); im(1-U); return;
+
+%% compute video superpixels reusing initialization from previous frame
+Is=seqIo(which('peds30.seq'),'toImgs'); Vs=single(Is); opts.bounds=0; tic
+for i=1:size(Is,4), I=Is(:,:,:,i); E=edgesDetect(I,model);
+  [opts.seed,Vs(:,:,:,i)]=spDetect(I,E,opts); end; opts.seed=[]; toc
+Vs=uint8(Vs*255); playMovie([Is Vs],15,-10,struct('hasChn',1))

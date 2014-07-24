@@ -94,42 +94,60 @@ void relabel( uint *S, uint h, uint w ) {
   delete [] T; delete [] map;
 }
 
-// make superpixels 1-indexed and add boundaries with value 0
-void boundaries( uint *S, uint h, uint w, float *E, uint nThreads ) {
-  // helper
+// add or remove superpixel boundaries (and make superpixels 1 or 0-indexed)
+void boundaries( uint *S, uint h, uint w, float *E, bool add, uint nThreads ) {
+  // helper for getting local neighborhood
   #define NEIGHBORS8(S) uint *L=S+x*h+y; int x0, y0, x1, y1; \
     x0 = (x==0) ? 0 : -1; x1 = (x==w-1) ? 0 : 1; x0*=h; x1*=h; \
     y0 = (y==0) ? 0 : -1; y1 = (y==h-1) ? 0 : 1; \
     uint N[8]={L[x0],L[x1],L[y0],L[y1],L[x0+y0],L[x0+y1],L[x1+y0],L[x1+y1]};
-  // make S 1-indexed
-  for( uint x=0; x<w*h; x++ ) S[x]++;
-  // add 4-connectivity boundary greedily
-  #ifdef USEOMP
-  nThreads = min(nThreads,uint(omp_get_max_threads()));
-  #pragma omp parallel for num_threads(nThreads)
-  #endif
-  for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
-    uint x=xi; uint a=x*h+y, b=(x+1)*h+y, c=x*h+(y+1), s=S[a]; if(s==0) continue;
-    if(x<w-1 && s!=S[b] && S[b]>0) if(E[a]>E[b]) S[a]=0; else S[b]=0;
-    if(y<h-1 && s!=S[c] && S[c]>0) if(E[a]>E[c]) S[a]=0; else S[c]=0;
-  }
-  // add 8-connectivity boundary
-  #ifdef USEOMP
-  #pragma omp parallel for num_threads(nThreads)
-  #endif
-  for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
-    uint x=xi; NEIGHBORS8(S); uint i, s=L[0]; if(s==0) continue;
-    if( N[0] && N[1] && N[2] && N[3] ) continue;
-    for( i=0; i<8; i++ ) if(N[i] && N[i]!=s) { L[0]=0; break; }
-  }
-  // remove excess boundary pixels
-  #ifdef USEOMP
-  #pragma omp parallel for num_threads(nThreads)
-  #endif
-  for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
-    uint x=xi; NEIGHBORS8(S); uint i, s=L[0]; if(s!=0) continue;
-    for( i=0; i<8; i++ ) if(N[i]) { s=L[0]=N[i]; break; }
-    for( i=0; i<8; i++ ) if(N[i] && N[i]!=s) { L[0]=0; break; }
+  if( add ) {
+    // make S 1-indexed
+    for( uint x=0; x<w*h; x++ ) S[x]++;
+    // add 4-connectivity boundary greedily
+    #ifdef USEOMP
+    nThreads = min(nThreads,uint(omp_get_max_threads()));
+    #pragma omp parallel for num_threads(nThreads)
+    #endif
+    for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
+      uint x=xi, a=x*h+y, b=(x+1)*h+y, c=x*h+(y+1), s=S[a]; if(s==0) continue;
+      if(x<w-1 && s!=S[b] && S[b]>0) if(E[a]>E[b]) S[a]=0; else S[b]=0;
+      if(y<h-1 && s!=S[c] && S[c]>0) if(E[a]>E[c]) S[a]=0; else S[c]=0;
+    }
+    // add 8-connectivity boundary
+    #ifdef USEOMP
+    #pragma omp parallel for num_threads(nThreads)
+    #endif
+    for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
+      uint x=xi; NEIGHBORS8(S); uint i, s=L[0]; if(s==0) continue;
+      if( N[0] && N[1] && N[2] && N[3] ) continue;
+      for( i=0; i<8; i++ ) if(N[i] && N[i]!=s) { L[0]=0; break; }
+    }
+    // remove excess boundary pixels
+    #ifdef USEOMP
+    #pragma omp parallel for num_threads(nThreads)
+    #endif
+    for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
+      uint x=xi; NEIGHBORS8(S); uint i, s=L[0]; if(s!=0) continue;
+      for( i=0; i<8; i++ ) if(N[i]) { s=L[0]=N[i]; break; }
+      for( i=0; i<8; i++ ) if(N[i] && N[i]!=s) { L[0]=0; break; }
+    }
+  } else {
+    // make S 0-indexed
+    uint *T=new uint[h*w]; memcpy(T,S,h*w*sizeof(uint));
+    #ifdef USEOMP
+    #pragma omp parallel for num_threads(nThreads)
+    #endif
+    for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
+      uint x=xi; NEIGHBORS8(T); uint i, *s=&S[x*h+y]; if(*s!=0) continue;
+      float *F=E+x*h+y; float e=10;
+      float Es[8]={F[x0],F[x1],F[y0],F[y1],F[x0+y0],F[x0+y1],F[x1+y0],F[x1+y1]};
+      for( i=0; i<8; i+=2 ) {
+        if(N[i+1] && Es[i+1]<e) { *s=N[i+1]; e=Es[i+1]; }
+        if(N[i+0] && Es[i+0]<e) { *s=N[i+0]; e=Es[i+0]; }
+      }
+    }
+    for( uint x=0; x<w*h; x++ ) if(S[x]) S[x]--; delete [] T;
   }
 }
 
@@ -284,12 +302,13 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] ) {
     sticky(T,h,w,I,E,prm); relabel(T,h,w);
 
   } else if(!strcmp(action,"boundaries")) {
-    // S = boundaries( S, E, nThreads )
+    // S = boundaries( S, E, add, nThreads )
     float *E = (float*) mxGetData(pr[1]);
-    uint nThreads = (uint) mxGetScalar(pr[2]);
+    bool add = mxGetScalar(pr[2])>0;
+    uint nThreads = (uint) mxGetScalar(pr[3]);
     pl[0] = mxCreateNumericMatrix(h,w,mxUINT32_CLASS,mxREAL);
     uint* T = (uint*) mxGetData(pl[0]); memcpy(T,S,h*w*sizeof(uint));
-    boundaries(T,h,w,E,nThreads);
+    boundaries(T,h,w,E,add,nThreads);
 
   } else if(!strcmp(action,"merge")) {
     // S = merge( S, E, thr );
