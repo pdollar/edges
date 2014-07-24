@@ -80,7 +80,7 @@ f) A fully trained edge model for RGB images is available as part of this releas
 
 5. History.
 
-Version 3.0 (07/15/2014)
+Version 3.0 (07/23/2014)
  - added Edge Boxes code corresponding to ECCV paper
  - added Sticky Superpixels code
  - edge detection code unchanged
