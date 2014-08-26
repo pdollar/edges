@@ -41,8 +41,8 @@ if( opts.multiscale )
   ss=2.^(-1:1); k=length(ss); inds=cell(1,k); segs=inds;
   siz=size(I); model.opts.multiscale=0; model.opts.nms=0; E=0;
   for i=1:k, s=ss(i); I1=imResample(I,s);
-    if(nargout<4), [E1,inds{i}]=edgesDetect(I1,model);
-    else [E1,inds{i},segs{i}]=edgesDetect(I1,model); end
+    if(nargout<4), [E1,~,inds{i}]=edgesDetect(I1,model);
+    else [E1,~,inds{i},segs{i}]=edgesDetect(I1,model); end
     E=E+imResample(E1,siz(1:2));
   end; E=E/k; model.opts=opts;
   
