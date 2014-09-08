@@ -4,9 +4,8 @@ function edgeBoxesSweeps()
 % Running the parameter sweeps requires altering internal flags.
 % The sweeps are not well documented, use at your own discretion.
 %
-% Structured Edge Detection Toolbox      Version 3.0
-% Copyright 2014 P. Dollar and L. Zitnick.  [pdollar-at-microsoft.com]
-% Please email me if you find bugs, or have suggestions or questions!
+% Structured Edge Detection Toolbox      Version 3.01
+% Code written by Piotr Dollar and Larry Zitnick, 2014.
 % Licensed under the MSR-LA Full Rights License [see license.txt]
 
 % define parameter sweeps

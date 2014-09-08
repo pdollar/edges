@@ -1,7 +1,6 @@
 /*******************************************************************************
-* Structured Edge Detection Toolbox      Version 3.0
-* Copyright 2014 Piotr Dollar.  [pdollar-at-microsoft.com]
-* Please email me if you find bugs, or have suggestions or questions!
+* Structured Edge Detection Toolbox      Version 3.01
+* Code written by Piotr Dollar, 2014.
 * Licensed under the MSR-LA Full Rights License [see license.txt]
 *******************************************************************************/
 #include <mex.h>
