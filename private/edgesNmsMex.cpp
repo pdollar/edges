@@ -48,7 +48,7 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
   }
 
   // suppress noisy edge estimates near boundaries
-  s=s>w/2?w/2:s; s>h/2? h/2:s;
+  s=s>w/2?w/2:s; s=s>h/2? h/2:s;
   for( int x=0; x<s; x++ ) for( int y=0; y<h; y++ ) {
     E[x*h+y]*=x/float(s); E[(w-1-x)*h+y]*=x/float(s); }
   for( int x=0; x<w; x++ ) for( int y=0; y<s; y++ ) {

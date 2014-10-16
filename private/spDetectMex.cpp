@@ -110,8 +110,8 @@ void boundaries( uint *S, uint h, uint w, float *E, bool add, uint nThreads ) {
     #endif
     for( int xi=0; xi<int(w); xi++ ) for( uint y=0; y<h; y++ ) {
       uint x=xi, a=x*h+y, b=(x+1)*h+y, c=x*h+(y+1), s=S[a]; if(s==0) continue;
-      if(x<w-1 && s!=S[b] && S[b]>0) if(E[a]>E[b]) S[a]=0; else S[b]=0;
-      if(y<h-1 && s!=S[c] && S[c]>0) if(E[a]>E[c]) S[a]=0; else S[c]=0;
+      if(x<w-1 && s!=S[b] && S[b]>0) { if(E[a]>E[b]) S[a]=0; else S[b]=0; }
+      if(y<h-1 && s!=S[c] && S[c]>0) { if(E[a]>E[c]) S[a]=0; else S[c]=0; }
     }
     // add 8-connectivity boundary
     #ifdef USEOMP
@@ -178,7 +178,7 @@ void merge( uint *S, uint h, uint w, float *E, float thr ) {
   for( x=0; x<w*h; x++ ) if(S[x]) S[x]=map[S[x]];
   for( x=0; x<w; x++ ) for( uint y=0; y<h; y++ ) if( S[x*h+y]==0 ) {
     uint i, s=0; NEIGHBORS8(S); for(i=0; i<8; i++) if(N[i]) { s=N[i]; break; }
-    for( i; i<8; i++ ) if(N[i] && N[i]!=s) break; if(i==8) S[x*h+y]=s;
+    for(; i<8; i++ ) if(N[i] && N[i]!=s) break; if(i==8) S[x*h+y]=s;
   }
   delete [] es; delete [] map;
 }
