@@ -1,7 +1,7 @@
 ###################################################################
 #                                                                 #
 #    Structured Edge Detection Toolbox V3.0                       #
-#    Piotr Dollar (pdollar-at-microsoft.com)                      #
+#    Piotr Dollar (pdollar-at-gmail.com)                          #
 #                                                                 #
 ###################################################################
 
@@ -79,6 +79,10 @@ f) A fully trained edge model for RGB images is available as part of this releas
 ###################################################################
 
 5. History.
+
+Version NEW
+ - now hosting on github (https://github.com/pdollar/edges)
+ - suppress Mac warnings, added Mac binaries
 
 Version 3.01 (09/08/2014)
  - spAffinities: minor fix (memory initialization)
