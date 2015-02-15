@@ -9,8 +9,8 @@ function edgeBoxesSweeps()
 % Licensed under the MSR-LA Full Rights License [see license.txt]
 
 % define parameter sweeps
-rt = 'D:\code\research\edges\';
-expNms = {'alpha','beta','minScore','edgeMinMag','edgeMergeThr',...
+rt = [fileparts(mfilename('fullpath')) filesep];
+expNms = {'alpha','beta','eta','minScore','edgeMinMag','edgeMergeThr',...
   'clusterMinMag','maxAspectRatio','minBoxArea','gamma','kappa'};
 expNms=expNms(1:end); opts=createExp(rt,expNms); maxn=inf;
 
@@ -23,7 +23,8 @@ for e=1:length(expNms)
   eval={'data',boxesData('split','val'),'names',{opts{e}.name},...
     'resDir',[rt 'boxes/sweeps/'],'maxn',maxn,'fName',expNms{e}};
   boxesEval(eval{:},'thrs',.7);
-  boxesEval(eval{:},'thrs',.5:.05:1,'cnts',1000);
+  ar=boxesEval(eval{:},'thrs',.5:.05:1,'cnts',1000);
+  ar=squeeze(mean(ar,2)); [~,i]=max(ar); disp(opts{e}(i))
 end
 
 end
@@ -57,6 +58,9 @@ switch expNm
   case 'beta'
     vs=60:5:90; N=length(vs);
     for e=1:N, opts(e).beta=vs(e)/100; end
+  case 'eta'
+    vs=0:5; N=length(vs);
+    for e=1:N, opts(e).eta=1-vs(e)/10000; end
   case 'minScore'
     vs=[0 5 10 25 50 100]; N=length(vs);
     for e=1:N, opts(e).minScore=vs(e)/1000; end

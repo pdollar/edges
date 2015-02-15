@@ -83,6 +83,7 @@ f) A fully trained edge model for RGB images is available as part of this releas
 Version NEW
  - now hosting on github (https://github.com/pdollar/edges)
  - suppress Mac warnings, added Mac binaries
+ - edgeBoxes: added adaptive nms variant described in arXiv15 paper
 
 Version 3.01 (09/08/2014)
  - spAffinities: minor fix (memory initialization)

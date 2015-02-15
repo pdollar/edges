@@ -15,6 +15,13 @@ function bbs = edgeBoxes( I, model, varargin )
 % Finally, a number of additional params listed below are set to reasonable
 % defaults and in most cases should not need to be altered.
 %
+% We recently introduced an adaptive variant of nms that results in better
+% Average Recall (AR) and also better subsequent detection performance.
+% This variant is described in Section 5.E of the following paper:
+%  Jan Hosang, Rodrigo Benenson, Piotr Dollár, and Bernt Schiele
+%  "What makes for effective detection proposals?", arXiv 2015.
+% TL;DR: to get top AR for 1000 boxes set alpha=.65, beta=.90, eta=.9996.
+%
 % For a faster version the proposal code runs at ~10 fps on average use:
 %  model.opts.sharpen=0; opts.alpha=.625; opts.minScore=.02;
 %
@@ -41,6 +48,7 @@ function bbs = edgeBoxes( I, model, varargin )
 %   .name           - [] target filename (if specified return is 1)
 %   .alpha          - [.65] step size of sliding window search
 %   .beta           - [.75] nms threshold for object proposals
+%   .eta            - [1.0] adaptation rate for nms threshold (see arXiv15)
 %   .minScore       - [.01] min score of boxes to detect
 %   .maxBoxes       - [1e4] max number of boxes to detect
 %   (2) additional parameters, safe to ignore and leave at default vals
@@ -64,8 +72,8 @@ function bbs = edgeBoxes( I, model, varargin )
 % Licensed under the MSR-LA Full Rights License [see license.txt]
 
 % get default parameters (unimportant parameters are undocumented)
-dfs={'name','', 'alpha',.65, 'beta',.75, 'minScore',.01, 'maxBoxes',1e4,...
-  'edgeMinMag',.1, 'edgeMergeThr',.5, 'clusterMinMag',.5, ...
+dfs={'name','', 'alpha',.65, 'beta',.75, 'eta',1, 'minScore',.01, ...
+  'maxBoxes',1e4, 'edgeMinMag',.1, 'edgeMergeThr',.5,'clusterMinMag',.5,...
   'maxAspectRatio',3, 'minBoxArea',1000, 'gamma',2, 'kappa',1.5 };
 o=getPrmDflt(varargin,dfs,1); if(nargin==0), bbs=o; return; end
 
@@ -84,7 +92,7 @@ if(all(ischar(I))), I=imread(I); end
 model.opts.nms=0; [E,O]=edgesDetect(I,model);
 if(0), E=gradientMag(convTri(single(I),4)); E=E/max(E(:)); end
 E=edgesNmsMex(E,O,2,0,1,model.opts.nThreads);
-bbs=edgeBoxesMex(E,O,o.alpha,o.beta,o.minScore,o.maxBoxes,...
+bbs=edgeBoxesMex(E,O,o.alpha,o.beta,o.eta,o.minScore,o.maxBoxes,...
   o.edgeMinMag,o.edgeMergeThr,o.clusterMinMag,...
   o.maxAspectRatio,o.minBoxArea,o.gamma,o.kappa);
 end
