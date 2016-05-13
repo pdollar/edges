@@ -46,7 +46,7 @@ Please read license.txt for more info.
 a) This code is written for the Matlab interpreter (tested with versions R2013a-2013b) and requires the Matlab Image Processing Toolbox. 
 
 b) Additionally, Piotr's Matlab Toolbox (version 3.26 or later) is also required. It can be downloaded at:
- http://vision.ucsd.edu/~pdollar/toolbox/doc/index.html.
+ https://pdollar.github.io/toolbox/.
 
 c) Next, please compile mex code from within Matlab (note: win64/linux64 binaries included):
   mex private/edgesDetectMex.cpp -outdir private [OMPPARAMS]
